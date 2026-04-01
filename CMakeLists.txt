@@ -6,14 +6,17 @@ project(hv VERSION 1.3.4)
 option(BUILD_SHARED "build shared library" ON)
 option(BUILD_STATIC "build static library" ON)
 
+# 在它们后面添加这段代码：
 # vcpkg compatibility: respect VCPKG_LIBRARY_LINKAGE
 if(DEFINED VCPKG_LIBRARY_LINKAGE)
     if(VCPKG_LIBRARY_LINKAGE STREQUAL "static")
         set(BUILD_SHARED OFF CACHE BOOL "" FORCE)
         set(BUILD_STATIC ON CACHE BOOL "" FORCE)
+        message(STATUS "vcpkg static build: BUILD_SHARED=OFF, BUILD_STATIC=ON")
     else()
         set(BUILD_SHARED ON CACHE BOOL "" FORCE)
         set(BUILD_STATIC OFF CACHE BOOL "" FORCE)
+        message(STATUS "vcpkg shared build: BUILD_SHARED=ON, BUILD_STATIC=OFF")
     endif()
 endif()
 
