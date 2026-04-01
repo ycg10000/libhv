@@ -3,22 +3,25 @@ cmake_policy(SET CMP0077 NEW)
 
 project(hv VERSION 1.3.4)
 
-option(BUILD_SHARED "build shared library" ON)
-option(BUILD_STATIC "build static library" ON)
-
-# 在它们后面添加这段代码：
-# vcpkg compatibility: respect VCPKG_LIBRARY_LINKAGE
+# vcpkg compatibility: 在 option 定义之前设置默认值
 if(DEFINED VCPKG_LIBRARY_LINKAGE)
     if(VCPKG_LIBRARY_LINKAGE STREQUAL "static")
-        set(BUILD_SHARED OFF CACHE BOOL "" FORCE)
-        set(BUILD_STATIC ON CACHE BOOL "" FORCE)
-        message(STATUS "vcpkg static build: BUILD_SHARED=OFF, BUILD_STATIC=ON")
+        set(BUILD_SHARED_DEFAULT OFF)
+        set(BUILD_STATIC_DEFAULT ON)
+        message(STATUS "vcpkg static build: only static library")
     else()
-        set(BUILD_SHARED ON CACHE BOOL "" FORCE)
-        set(BUILD_STATIC OFF CACHE BOOL "" FORCE)
-        message(STATUS "vcpkg shared build: BUILD_SHARED=ON, BUILD_STATIC=OFF")
+        set(BUILD_SHARED_DEFAULT ON)
+        set(BUILD_STATIC_DEFAULT OFF)
+        message(STATUS "vcpkg shared build: only shared library")
     endif()
+else()
+    set(BUILD_SHARED_DEFAULT ON)
+    set(BUILD_STATIC_DEFAULT ON)
 endif()
+
+# 使用默认值定义 option
+option(BUILD_SHARED "build shared library" ${BUILD_SHARED_DEFAULT})
+option(BUILD_STATIC "build static library" ${BUILD_STATIC_DEFAULT})
 
 option(BUILD_EXAMPLES "build examples" ON)
 option(BUILD_UNITTEST "build unittest" OFF)
