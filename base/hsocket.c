@@ -270,7 +270,7 @@ static int ConnectFDTimeout(int connfd, int ms) {
     // Use poll() to avoid FD_SETSIZE limit (fd >= 1024 crashes with select)
     struct pollfd pfd;
     pfd.fd = connfd;
-    pfd.events = POLLOUT;
+    pfd.events = POLLOUT | POLLERR | POLLHUP;
     pfd.revents = 0;
     int ret = poll(&pfd, 1, ms);
     if (ret < 0) {
@@ -279,22 +279,35 @@ static int ConnectFDTimeout(int connfd, int ms) {
     }
 #else
     // Windows: select() is safe (fd_set uses different implementation)
-    struct timeval tv = { ms / 1000, (ms % 1000) * 1000 };
+    struct timeval tv = {ms / 1000, (ms % 1000) * 1000};
     fd_set writefds;
+    fd_set errorfds;
     FD_ZERO(&writefds);
+    FD_ZERO(&errorfds);
     FD_SET(connfd, &writefds);
-    int ret = select(connfd+1, 0, &writefds, 0, &tv);
+    FD_SET(connfd, &errorfds);
+    int ret = select(connfd + 1, 0, &writefds, &errorfds, &tv);
     if (ret < 0) {
         perror("select");
         goto error;
     }
 #endif
     if (ret == 0) {
+#ifdef OS_WIN
+        WSASetLastError(WSAETIMEDOUT);
+#else
         errno = ETIMEDOUT;
+#endif
         goto error;
     }
     if (getsockopt(connfd, SOL_SOCKET, SO_ERROR, (char*)&err, &optlen) < 0 || err != 0) {
-        if (err != 0) errno = err;
+        if (err != 0)
+#ifdef OS_WIN
+            WSASetLastError(err);
+#else
+            errno = err;
+#endif
+
         goto error;
     }
     blocking(connfd);
@@ -400,7 +413,7 @@ int Socketpair(int family, int type, int protocol, int sv[2]) {
     socklen_t addrlen = sizeof(localaddr);
     memset(&localaddr, 0, addrlen);
     localaddr.sin_family = AF_INET;
-    localaddr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    localaddr.sin_addr.s_addr = htonl(INADDR_ANY);
     localaddr.sin_port = 0;
     // listener
     listenfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -420,6 +433,9 @@ int Socketpair(int family, int type, int protocol, int sv[2]) {
         perror("getsockname");
         goto error;
     }
+
+    localaddr.sin_addr.s_addr= htonl(INADDR_LOOPBACK);
+
     // connector
     connfd = socket(AF_INET, SOCK_STREAM, 0);
     if (connfd < 0) {

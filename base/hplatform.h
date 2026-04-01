@@ -199,6 +199,11 @@
     #define R_OK            (1<<2)  /* test for read permission */
     #endif
 
+    // errno
+    #ifndef ETIMEDOUT
+    #define ETIMEDOUT       WSAETIMEDOUT
+    #endif
+
     // stat
     #ifndef S_ISREG
     #define S_ISREG(st_mode) (((st_mode) & S_IFMT) == S_IFREG)
