@@ -6,6 +6,17 @@ project(hv VERSION 1.3.4)
 option(BUILD_SHARED "build shared library" ON)
 option(BUILD_STATIC "build static library" ON)
 
+# vcpkg compatibility: respect VCPKG_LIBRARY_LINKAGE
+if(DEFINED VCPKG_LIBRARY_LINKAGE)
+    if(VCPKG_LIBRARY_LINKAGE STREQUAL "static")
+        set(BUILD_SHARED OFF CACHE BOOL "" FORCE)
+        set(BUILD_STATIC ON CACHE BOOL "" FORCE)
+    else()
+        set(BUILD_SHARED ON CACHE BOOL "" FORCE)
+        set(BUILD_STATIC OFF CACHE BOOL "" FORCE)
+    endif()
+endif()
+
 option(BUILD_EXAMPLES "build examples" ON)
 option(BUILD_UNITTEST "build unittest" OFF)
 
@@ -258,9 +269,7 @@ if(WIN32)
     list(APPEND LIBHV_SRCS ${CMAKE_BINARY_DIR}/${PROJECT_NAME}.rc)
 endif()
 
-#file(INSTALL ${LIBHV_HEADERS} DESTINATION include/hv)
-#file(INSTALL ${LIBHV_HEADERS} DESTINATION ${PROJECT_SOURCE_DIR}/include/hv)
-
+# Build shared library
 if(BUILD_SHARED)
     add_library(hv SHARED ${LIBHV_SRCS})
     target_compile_definitions(hv PRIVATE HV_DYNAMICLIB)
@@ -275,6 +284,7 @@ if(BUILD_SHARED)
     add_custom_target(libhv DEPENDS hv)
 endif()
 
+# Build static library
 if(BUILD_STATIC)
     add_library(hv_static STATIC ${LIBHV_SRCS})
     target_compile_definitions(hv_static PUBLIC HV_STATICLIB)
@@ -296,7 +306,11 @@ if(WIN32 AND NOT MINGW)
     endif()
 endif()
 
-install(FILES ${LIBHV_HEADERS} DESTINATION include/hv)
+# Install headers - use install command instead of file(INSTALL) to avoid configure-time installation
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/hv/
+    DESTINATION include/hv
+    FILES_MATCHING PATTERN "*.h")
+
 install(EXPORT libhvConfig DESTINATION lib/cmake/libhv)
 
 if(BUILD_SHARED)
