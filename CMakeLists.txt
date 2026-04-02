@@ -3,25 +3,8 @@ cmake_policy(SET CMP0077 NEW)
 
 project(hv VERSION 1.3.4)
 
-# vcpkg compatibility: 在 option 定义之前设置默认值
-if(DEFINED VCPKG_LIBRARY_LINKAGE)
-    if(VCPKG_LIBRARY_LINKAGE STREQUAL "static")
-        set(BUILD_SHARED_DEFAULT OFF)
-        set(BUILD_STATIC_DEFAULT ON)
-        message(STATUS "vcpkg static build: only static library")
-    else()
-        set(BUILD_SHARED_DEFAULT ON)
-        set(BUILD_STATIC_DEFAULT OFF)
-        message(STATUS "vcpkg shared build: only shared library")
-    endif()
-else()
-    set(BUILD_SHARED_DEFAULT ON)
-    set(BUILD_STATIC_DEFAULT ON)
-endif()
-
-# 使用默认值定义 option
-option(BUILD_SHARED "build shared library" ${BUILD_SHARED_DEFAULT})
-option(BUILD_STATIC "build static library" ${BUILD_STATIC_DEFAULT})
+option(BUILD_SHARED "build shared library" ON)
+option(BUILD_STATIC "build static library" ON)
 
 option(BUILD_EXAMPLES "build examples" ON)
 option(BUILD_UNITTEST "build unittest" OFF)
@@ -275,7 +258,9 @@ if(WIN32)
     list(APPEND LIBHV_SRCS ${CMAKE_BINARY_DIR}/${PROJECT_NAME}.rc)
 endif()
 
-# Build shared library
+file(INSTALL ${LIBHV_HEADERS} DESTINATION include/hv)
+file(INSTALL ${LIBHV_HEADERS} DESTINATION ${PROJECT_SOURCE_DIR}/include/hv)
+
 if(BUILD_SHARED)
     add_library(hv SHARED ${LIBHV_SRCS})
     target_compile_definitions(hv PRIVATE HV_DYNAMICLIB)
@@ -290,7 +275,6 @@ if(BUILD_SHARED)
     add_custom_target(libhv DEPENDS hv)
 endif()
 
-# Build static library
 if(BUILD_STATIC)
     add_library(hv_static STATIC ${LIBHV_SRCS})
     target_compile_definitions(hv_static PUBLIC HV_STATICLIB)
@@ -312,11 +296,7 @@ if(WIN32 AND NOT MINGW)
     endif()
 endif()
 
-# Install headers - use install command instead of file(INSTALL) to avoid configure-time installation
-install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/hv/
-    DESTINATION include/hv
-    FILES_MATCHING PATTERN "*.h")
-
+install(FILES ${LIBHV_HEADERS} DESTINATION include/hv)
 install(EXPORT libhvConfig DESTINATION lib/cmake/libhv)
 
 if(BUILD_SHARED)
